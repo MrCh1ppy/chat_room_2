@@ -5,7 +5,7 @@ pub mod lib {
     use std::thread;
     use std::time::Duration;
 
-    pub enum Order {
+    pub(crate) enum Order {
         Client,
         Server,
     }
@@ -15,17 +15,20 @@ pub mod lib {
         user_name: String,
         sleep_millis: u64,
         msg_size: usize,
+        order_type:Order
     }
 
     impl TcpSession {
         pub fn server(local_host: &str, sleep_millis: u64, msg_size: usize) -> TcpSession {
             let local_host = local_host.to_string();
             let user_name = "server".to_string();
+            let order_type = Order::Server;
             TcpSession {
                 local_host,
                 user_name,
                 sleep_millis,
                 msg_size,
+                order_type
             }
         }
 
@@ -37,16 +40,18 @@ pub mod lib {
         ) -> TcpSession {
             let local_host = local_host.to_string();
             let user_name = user_name.to_string();
+            let order_type = Order::Client;
             TcpSession {
                 local_host,
                 user_name,
                 sleep_millis,
                 msg_size,
+                order_type
             }
         }
 
-        pub fn run(self, order: Order) {
-            match order {
+        pub fn run(self) {
+            match self.order_type {
                 Order::Server => self.run_server(),
                 Order::Client => self.run_client(),
             }
@@ -76,7 +81,7 @@ pub mod lib {
                             }
                             Err(ref error) if error.kind() == ErrorKind::WouldBlock => (),
                             Err(_) => {
-                                println!("connect to {} lost", address);
+                                println!("connection to {} lost", address);
                                 break;
                             }
                         }
