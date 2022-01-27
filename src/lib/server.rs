@@ -26,7 +26,7 @@ impl Connect for ServerParam {
         let listener = TcpListener::bind(self.local_host.clone()).expect("bind failed");
         listener.set_nonblocking(true).unwrap();
         let mut clients = vec![];
-        let (sender, receiver) = mpsc::channel::<_>();
+        let (sender, receiver) = mpsc::channel::<String>();
         loop {
             if let Ok((mut stream, address)) = listener.accept() {
                 println!("{} has connected", address);
@@ -51,8 +51,8 @@ impl Connect for ServerParam {
                         }
                     }
                 });
+                thread::sleep(Duration::from_millis(self.sleep_millis));
             }
-            thread::sleep(Duration::from_millis(self.sleep_millis as u64));
             if let Ok(msg) = receiver.recv() {
                 clients = clients
                     .into_iter()
