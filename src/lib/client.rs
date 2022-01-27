@@ -1,4 +1,3 @@
-use std::{io, thread};
 use std::cmp::Ordering;
 use std::io::{ErrorKind, Read, Write};
 use std::net::TcpStream;
@@ -7,6 +6,8 @@ use std::str::FromStr;
 use std::sync::mpsc;
 use std::sync::mpsc::{RecvError, SendError, TryRecvError};
 use std::time::Duration;
+use std::{io, thread};
+
 use chrono::Utc;
 
 use crate::lib::Connect;
@@ -33,7 +34,16 @@ impl Connect for ClientPram {
     fn run(self) {
         let local_target_address_for_closures = self.target_host.clone();
         let local_target_address_for_text = self.target_host.clone();
-        let mut client = TcpStream::connect(self.target_host).expect("connect failed");
+        let mut client = match TcpStream::connect(self.target_host) {
+            Ok(stream) => stream,
+            Err(ref error) if error.kind() == ErrorKind::ConnectionRefused => {
+                println!("服务器尚未启动\n进程退出\n");
+                panic!("host not founded");
+            }
+            Err(_) => {
+                panic!("connect failed");
+            }
+        };
         client.set_nonblocking(true).expect("no block failed");
         let (sender, receiver) = mpsc::channel::<String>();
         let socket_address = client
@@ -94,7 +104,9 @@ impl Connect for ClientPram {
                 m_date: Utc::now().naive_local().to_string(),
                 username: "".to_string(),
             };
-            if sender.send(message.to_string()).is_err() {break}
+            if sender.send(message.to_string()).is_err() {
+                break;
+            }
         }
     }
 }
