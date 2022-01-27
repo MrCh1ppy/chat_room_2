@@ -24,9 +24,10 @@ pub fn new(local_host: &str, sleep_millis: u64, msg_size: usize) -> ServerParam 
 impl Connect for ServerParam {
     fn run(self) {
         let listener = TcpListener::bind(self.local_host.clone()).expect("bind failed");
-        listener.set_nonblocking(true).unwrap();
+        listener.set_nonblocking(true).expect("no blocking failed");
         let mut clients = vec![];
         let (sender, receiver) = mpsc::channel::<String>();
+        println!("server started({})",&self.local_host);
         loop {
             if let Ok((mut stream, address)) = listener.accept() {
                 println!("{} has connected", address);
@@ -50,10 +51,12 @@ impl Connect for ServerParam {
                             break;
                         }
                     }
+                    thread::sleep(Duration::from_millis(self.sleep_millis));
                 });
-                thread::sleep(Duration::from_millis(self.sleep_millis));
             }
-            if let Ok(msg) = receiver.recv() {
+            //需要使用try_recy
+            if let Ok(msg) = receiver.try_recv() {
+                println!("msg[{:?}] is received",msg);
                 clients = clients
                     .into_iter()
                     .flat_map(|mut client| {

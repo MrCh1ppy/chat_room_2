@@ -79,8 +79,8 @@ impl Connect for ClientPram {
             }
             match receiver.try_recv() {
                 Ok(msg) => {
-                    //这里少了一个clone
-                    let mut byte_msg = msg.into_bytes();
+                    //这里少了一个clone(已加)
+                    let mut byte_msg = msg.clone().into_bytes();
                     byte_msg.resize(self.msg_size, 0);
                     client.write_all(&byte_msg).expect("unable to send msg");
                 }
@@ -100,7 +100,7 @@ impl Connect for ClientPram {
             let message = TextMessage {
                 from: text_for_from.clone(),
                 to: local_target_address_for_text.clone(),
-                content: msg.to_string(),
+                content: msg.trim().to_string(),
                 m_date: Utc::now().naive_local().to_string(),
                 username: self.user_name.to_string(),
             };
@@ -108,6 +108,7 @@ impl Connect for ClientPram {
                 break;
             }
         }
+        println!("bye");
     }
 }
 

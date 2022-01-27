@@ -7,7 +7,7 @@ use chat_room_2::lib::Connect;
 
 const TARGET: &str = "127.0.0.1:7878";
 const SLEEP_MILLIS: u64 = 10;
-const MSG_SIZE: usize = 128;
+const MSG_SIZE: usize = 256;
 
 fn main() {
     println!("1:server,2:client,3:quit");
@@ -37,9 +37,9 @@ fn main() {
                 let username = if msg.is_empty() {
                     continue;
                 } else {
-                    msg
+                    msg.trim()
                 };
-                lib::client::new(TARGET, username.as_str(), SLEEP_MILLIS, MSG_SIZE).run()
+                lib::client::new(TARGET, username, SLEEP_MILLIS, MSG_SIZE).run()
             }
             3 => break,
             _ => continue,
