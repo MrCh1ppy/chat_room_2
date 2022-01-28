@@ -101,7 +101,7 @@ impl Connect for ClientPram {
                 from: text_for_from.clone(),
                 to: local_target_address_for_text.clone(),
                 content: msg.trim().to_string(),
-                m_date: Utc::now().naive_local().to_string(),
+                m_date: Utc::now().naive_local().format("%T").to_string(),
                 username: self.user_name.to_string(),
             };
             if sender.send(message.to_string()).is_err() {
