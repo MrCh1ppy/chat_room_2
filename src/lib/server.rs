@@ -4,7 +4,6 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
-use crate::lib;
 use crate::lib::Connect;
 
 pub struct ServerParam {

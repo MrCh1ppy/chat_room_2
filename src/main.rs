@@ -1,7 +1,5 @@
 use std::io;
 
-use chrono::format::parse;
-
 use chat_room_2::lib;
 use chat_room_2::lib::Connect;
 
