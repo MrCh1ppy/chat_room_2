@@ -16,7 +16,7 @@ fn main() {
         io::stdin().read_line(&mut msg).unwrap();
         let take = msg
             .trim()
-            .split(" ")
+            .split(' ')
             .into_iter()
             .collect::<Vec<_>>()
             .get(0)
