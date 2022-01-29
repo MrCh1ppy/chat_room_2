@@ -4,6 +4,7 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
+use crate::lib;
 use crate::lib::Connect;
 
 pub struct ServerParam {
@@ -42,7 +43,6 @@ impl Connect for ServerParam {
                                 .take_while(|&cur| cur != 0)
                                 .collect::<Vec<_>>();
                             let msg = String::from_utf8(msg).expect("change fail");
-                            println!("one msg have got and sent");
                             sender.send(msg).expect("send fail");
                         }
                         Err(ref error) if error.kind() == ErrorKind::WouldBlock => (),

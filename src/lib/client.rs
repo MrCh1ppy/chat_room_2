@@ -1,3 +1,4 @@
+use std::{io, thread};
 use std::cmp::Ordering;
 use std::io::{ErrorKind, Read, Write};
 use std::net::TcpStream;
@@ -6,11 +7,11 @@ use std::str::FromStr;
 use std::sync::mpsc;
 use std::sync::mpsc::{RecvError, SendError, TryRecvError};
 use std::time::Duration;
-use std::{io, thread};
 
 use chrono::Utc;
 
-use crate::lib::Connect;
+use crate::lib;
+use crate::lib::{Connect, TextMessage};
 
 pub struct ClientPram {
     target_host: String,
@@ -52,42 +53,43 @@ impl Connect for ClientPram {
             .to_string();
         let text_for_from = socket_address.clone();
         //新开了一个线程,与下面并行
-        thread::spawn(move || loop {
-            let mut buffer = vec![0; self.msg_size];
-            match client.read_exact(&mut buffer) {
-                Ok(_) => {
-                    match String::from_utf8(buffer)
-                        .expect("u8 -> str failed")
-                        .parse::<TextMessage>()
-                    {
-                        Ok(msg) => match &msg.from.cmp(&socket_address) {
-                            Ordering::Equal => (),
-                            _ => {
-                                println!("{}({}): {}", msg.username(), msg.m_date(), msg.content())
+        thread::spawn(move || {
+            loop {
+                let mut buffer = vec![0; self.msg_size];
+                match client.read_exact(&mut buffer) {
+                    Ok(_) => {
+                        match String::from_utf8(buffer)
+                            .expect("u8 -> str failed").parse::<TextMessage>()
+                        {
+                            Ok(msg) => match &msg.from.cmp(&socket_address) {
+                                Ordering::Equal => (),
+                                _ => {
+                                    println!("{}({}): {}", msg.username(), msg.m_date(), msg.content())
+                                }
+                            },
+                            Err(_) => {
+                                println!("msg parse failed");
                             }
-                        },
-                        Err(_) => {
-                            println!("msg parse failed");
                         }
                     }
+                    Err(ref error) if error.kind() == ErrorKind::WouldBlock => (),
+                    Err(_) => {
+                        println!("connect to {} lost", &local_target_address_for_closures);
+                        break;
+                    }
                 }
-                Err(ref error) if error.kind() == ErrorKind::WouldBlock => (),
-                Err(_) => {
-                    println!("connect to {} lost", &local_target_address_for_closures);
-                    break;
+                match receiver.try_recv() {
+                    Ok(msg) => {
+                        //这里少了一个clone(已加)
+                        let mut byte_msg = msg.clone().into_bytes();
+                        byte_msg.resize(self.msg_size, 0);
+                        client.write_all(&byte_msg).expect("unable to send msg");
+                    }
+                    Err(TryRecvError::Empty) => (),
+                    Err(TryRecvError::Disconnected) => break,
                 }
+                thread::sleep(Duration::from_millis(self.sleep_millis))
             }
-            match receiver.try_recv() {
-                Ok(msg) => {
-                    //这里少了一个clone(已加)
-                    let mut byte_msg = msg.clone().into_bytes();
-                    byte_msg.resize(self.msg_size, 0);
-                    client.write_all(&byte_msg).expect("unable to send msg");
-                }
-                Err(TryRecvError::Empty) => (),
-                Err(TryRecvError::Disconnected) => break,
-            }
-            thread::sleep(Duration::from_millis(self.sleep_millis))
         });
         println!("已进入聊天室");
         loop {
@@ -97,7 +99,7 @@ impl Connect for ClientPram {
             if msg == "quit" || msg == "exit" {
                 break;
             }
-            let message = TextMessage {
+            let message = lib::TextMessage {
                 from: text_for_from.clone(),
                 to: local_target_address_for_text.clone(),
                 content: msg.trim().to_string(),
@@ -109,67 +111,5 @@ impl Connect for ClientPram {
             }
         }
         println!("bye");
-    }
-}
-
-struct TextMessage {
-    from: String,
-    to: String,
-    content: String,
-    m_date: String,
-    username: String,
-}
-
-impl TextMessage {
-    pub fn from(&self) -> &str {
-        &self.from
-    }
-
-    pub fn to(&self) -> &str {
-        &self.to
-    }
-
-    pub fn content(&self) -> &str {
-        &self.content
-    }
-
-    pub fn m_date(&self) -> &str {
-        &self.m_date
-    }
-
-    pub fn username(&self) -> &str {
-        &self.username
-    }
-}
-
-//实现了toString接口
-impl ToString for TextMessage {
-    fn to_string(&self) -> String {
-        format!(
-            "^{}&{}&{}&{}&{}^",
-            self.from, self.to, self.content, self.m_date, self.username
-        )
-    }
-}
-
-//实现了通过字符串解析的接口
-impl FromStr for TextMessage {
-    type Err = ParseIntError;
-
-    //用str反向解析获取对象
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let msg: Vec<&str> = s.trim_matches(|p| p == '^').split('&').collect();
-        let from = msg[0].to_string();
-        let to = msg[1].to_string();
-        let content = msg[2].to_string();
-        let m_date = msg[3].to_string();
-        let username = msg[4].to_string();
-        Ok(TextMessage {
-            from,
-            to,
-            content,
-            m_date,
-            username,
-        })
     }
 }
