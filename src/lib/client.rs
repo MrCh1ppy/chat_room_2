@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 use std::io::{ErrorKind, Read, Write};
 use std::net::TcpStream;
 use std::sync::mpsc;
-use std::sync::mpsc::{RecvError, SendError, TryRecvError};
+use std::sync::mpsc::TryRecvError;
 use std::time::Duration;
 
 use chrono::Utc;
